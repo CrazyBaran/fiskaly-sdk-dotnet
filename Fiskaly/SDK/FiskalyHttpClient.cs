@@ -6,9 +6,13 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
+#if NETSTANDARD2_0
+using System.Threading.Tasks;
+#endif
+
 namespace Fiskaly
 {
-    public class FiskalyHttpClient
+    public class FiskalyHttpClient : IFiskalyHttpClient
     {
         private string Context { get; set; }
 
@@ -44,12 +48,13 @@ namespace Fiskaly
             InitializeClient();
         }
 
-        private void InitializeClient() {
-        #if NET40
+        private void InitializeClient()
+        {
+#if NET40
             this.Client = new WindowsClient();
 
-        // Non-Windows platforms are only supported through .NET Standard 2.1 at the moment
-        #elif NETSTANDARD2_0
+            // Non-Windows platforms are only supported through .NET Standard 2.1 at the moment
+#elif NETSTANDARD2_0
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -57,20 +62,20 @@ namespace Fiskaly
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                #if Android
+#if Android
                     Client = new AndroidClient();
-                #else
+#else
                     Client = new LinuxClient();
-                #endif
+#endif
             }
             else
             {
                 Client = new LinuxClient();
             }
         // Use Windows as default for safety
-        #else
+#else
             Client = new WindowsClient();
-        #endif
+#endif
         }
 
         private void InitializeContext()
@@ -146,7 +151,7 @@ namespace Fiskaly
                 response.Error.Data.ToString()
             );
         }
-        
+
         private void ThrowOnError<T>(JsonRpcResponse<T> response)
         {
             if (response.Error != null)
@@ -165,6 +170,38 @@ namespace Fiskaly
                 }
             }
         }
+
+#if NET40
+
+
+#elif NETSTANDARD2_0
+        public Task<FiskalyHttpResponse> RequestAsync(string method, string path, byte[] body, Dictionary<string, string> headers, Dictionary<string, string> query)
+        {
+            if (!InitialContextSet)
+            {
+                InitializeContext();
+            }
+
+            byte[] payload = CreateRequestPayload(method, path, body, headers, query);
+            string invocationResponse = Client.InvokeAsync(payload);
+            System.Diagnostics.Debug.WriteLine(invocationResponse);
+
+            JsonRpcResponse<RequestResult> rpcResponse =
+                JsonConvert.DeserializeObject<JsonRpcResponse<RequestResult>>(invocationResponse);
+
+            ThrowOnError(rpcResponse);
+
+            Context = rpcResponse.Result.Context;
+
+            return new FiskalyHttpResponse
+            {
+                Status = rpcResponse.Result.Response.Status,
+                Headers = rpcResponse.Result.Response.Headers,
+                Body = Transformer.DecodeBase64BytesToUtf8Bytes(rpcResponse.Result.Response.Body)
+            };
+        }
+
+#endif
 
         public FiskalyHttpResponse Request(string method, string path, byte[] body, Dictionary<string, string> headers, Dictionary<string, string> query)
         {

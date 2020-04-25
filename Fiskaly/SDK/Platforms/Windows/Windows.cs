@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace Fiskaly.Client
 {
@@ -23,7 +24,7 @@ namespace Fiskaly.Client
         [DllImport(LIB_64, EntryPoint = SYMBOL_INVOKE, CallingConvention = CallingConvention.Cdecl)]
         internal static extern IntPtr Invoke64([In] byte[] request);
 
-        protected override IntPtr PerformInvokeForArchitecure(byte[] request)
+        protected override IntPtr PerformInvokeForArchitecture(byte[] request)
         {
             if (Is64BitSystem)
             {
@@ -43,5 +44,21 @@ namespace Fiskaly.Client
                 Free32(allocatedMemory);
             }
         }
+
+#if NET40
+
+
+#elif NETSTANDARD2_0
+        protected override Task<IntPtr> PerformInvokeForArchitectureAsync(byte[] request)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override Task PerformFreeForArchitectureAsync(IntPtr resultPtr)
+        {
+            throw new NotImplementedException();
+        }
+
+#endif
     }
 }

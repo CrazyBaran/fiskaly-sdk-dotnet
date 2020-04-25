@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace Fiskaly.Client
 {
@@ -29,17 +30,37 @@ namespace Fiskaly.Client
         protected const string LIB_PREFIX = "com.fiskaly.client";
         protected const string CLIENT_VERSION = Constants.CLIENT_VERSION;
 
-        abstract protected IntPtr PerformInvokeForArchitecure(byte[] request);
-        abstract protected void PerformFreeForArchitecture(IntPtr allocatedMemory);
+        protected abstract IntPtr PerformInvokeForArchitecture(byte[] request);
+        protected abstract void PerformFreeForArchitecture(IntPtr allocatedMemory);
+
 
         public string Invoke([In] byte[] request)
         {
-            IntPtr resultPtr = PerformInvokeForArchitecure(request);
+            IntPtr resultPtr = PerformInvokeForArchitecture(request);
             string result = Marshal.PtrToStringAnsi(resultPtr);
 
             PerformFreeForArchitecture(resultPtr);
 
             return result;
         }
+
+#if NET40
+
+
+#elif NETSTANDARD2_0
+        protected abstract Task<IntPtr> PerformInvokeForArchitectureAsync(byte[] request);
+        protected abstract Task PerformFreeForArchitectureAsync(IntPtr resultPtr);
+
+        public async Task<string> InvokeAsync([In] byte[] request)
+        {
+            IntPtr resultPtr = await PerformInvokeForArchitectureAsync(request);
+            string result = Marshal.PtrToStringAnsi(resultPtr);
+
+            PerformFreeForArchitectureAsync(resultPtr);
+
+            return result;
+        }
+#endif
+
     }
 }

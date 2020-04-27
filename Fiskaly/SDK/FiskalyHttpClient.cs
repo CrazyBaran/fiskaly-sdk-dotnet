@@ -175,7 +175,7 @@ namespace Fiskaly
 
 
 #elif NETSTANDARD2_0
-        public Task<FiskalyHttpResponse> RequestAsync(string method, string path, byte[] body, Dictionary<string, string> headers, Dictionary<string, string> query)
+        public async Task<FiskalyHttpResponse> RequestAsync(string method, string path, byte[] body, Dictionary<string, string> headers, Dictionary<string, string> query)
         {
             if (!InitialContextSet)
             {
@@ -183,7 +183,7 @@ namespace Fiskaly
             }
 
             byte[] payload = CreateRequestPayload(method, path, body, headers, query);
-            string invocationResponse = Client.InvokeAsync(payload);
+            string invocationResponse = await Client.InvokeAsync(payload);
             System.Diagnostics.Debug.WriteLine(invocationResponse);
 
             JsonRpcResponse<RequestResult> rpcResponse =
